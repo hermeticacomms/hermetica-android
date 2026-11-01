@@ -31,7 +31,8 @@ Hermetica.reset() // on logout
 
 Every call returns immediately and is safe from any thread. Events are stored on the device, sent in batches (every few
 seconds, at 20 events, and when the app goes to the background) and retried with backoff, so nothing is lost offline
-or when the app is killed. Each request carries an `Idempotency-Key`, and each event a dedupe key, so retries never
+or when the app is killed. If the queue cannot be sent when the app goes to the background, a WorkManager job sends it
+as soon as a network is available (no setup needed; it uses your WorkManager configuration if you have one). Each request carries an `Idempotency-Key`, and each event a dedupe key, so retries never
 count twice. The SDK creates and stores an anonymous id for the device; `identify` links that history to the profile.
 
 ### Privacy

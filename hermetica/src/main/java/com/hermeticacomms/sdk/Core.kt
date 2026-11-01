@@ -26,7 +26,7 @@ internal class Core(context: Context, val siteKey: String, baseUrl: String, val 
     val push = Push(this)
     val inApp = InApp(this)
     val geofences = Geofences(this)
-    val lifecycle = Lifecycle(onForeground = { inApp.trigger(InAppTrigger.AppOpen); push.refreshIfChanged() }, onBackground = { flushAsync() })
+    val lifecycle = Lifecycle(onForeground = { inApp.trigger(InAppTrigger.AppOpen); push.refreshIfChanged() }, onBackground = { flushOnBackground() })
     private var flushScheduled = false
 
     init {
@@ -104,6 +104,9 @@ internal class Core(context: Context, val siteKey: String, baseUrl: String, val 
     fun flushNow(): Boolean = optedOut || outbox.flush(consent())
 
     fun flushAsync() = executor.execute { flushNow() }
+
+    /** Whatever the background flush could not send (offline, server down) goes to a WorkManager job that waits for a network. */
+    private fun flushOnBackground() = executor.execute { if (!flushNow()) HermeticaFlushWorker.schedule(app) }
 
     private fun scheduleFlush() {
         synchronized(this) {

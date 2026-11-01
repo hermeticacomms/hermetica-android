@@ -1,8 +1,14 @@
 package com.hermeticacomms.sdk
 
 import android.Manifest
+import android.app.Activity
 import android.app.Application
 import android.content.Intent
+import androidx.work.Configuration
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import androidx.work.testing.SynchronousExecutor
+import androidx.work.testing.WorkManagerTestInitHelper
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
@@ -19,6 +25,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -110,6 +117,38 @@ class HermeticaTest {
         init() // a new process: the persisted queue is sent at start
         assertEquals(4, server.requestCount)
         assertEquals(0, outbox.size())
+    }
+
+    @Test
+    fun aFailedBackgroundFlushIsRetriedByWorkManagerOnceOnline() {
+        WorkManagerTestInitHelper.initializeTestWorkManager(app, Configuration.Builder().setExecutor(SynchronousExecutor()).build())
+        val activity = Robolectric.buildActivity(Activity::class.java).setup() // foreground (its in-app fetch gets the default reply)
+        Hermetica.track("e0")
+        repeat(3) { reply(503) }
+        val before = server.requestCount
+        activity.pause().stop() // background: the flush fails three times
+        assertEquals(before + 3, server.requestCount)
+        assertEquals(1, outbox.size())
+
+        val work = WorkManager.getInstance(app).getWorkInfosForUniqueWork(HermeticaFlushWorker.NAME).get().single()
+        assertEquals(WorkInfo.State.ENQUEUED, work.state) // waiting for a network
+        WorkManagerTestInitHelper.getTestDriver(app)!!.setAllConstraintsMet(work.id)
+        assertEquals(0, outbox.size())
+        assertEquals(WorkInfo.State.SUCCEEDED, WorkManager.getInstance(app).getWorkInfoById(work.id).get()!!.state)
+        val keys = List(server.requestCount) { server.takeRequest(5, TimeUnit.SECONDS)!! }
+            .filter { it.path == "/ingest/v1/batch" }.map { it.getHeader("Idempotency-Key") }
+        assertEquals(4, keys.size)
+        assertEquals(1, keys.toSet().size) // the job resends the same batch with the same key
+    }
+
+    @Test
+    fun noJobWhenTheBackgroundFlushSucceeds() {
+        WorkManagerTestInitHelper.initializeTestWorkManager(app, Configuration.Builder().setExecutor(SynchronousExecutor()).build())
+        val activity = Robolectric.buildActivity(Activity::class.java).setup()
+        Hermetica.track("e0")
+        activity.pause().stop()
+        assertEquals(0, outbox.size())
+        assertEquals(emptyList<WorkInfo>(), WorkManager.getInstance(app).getWorkInfosForUniqueWork(HermeticaFlushWorker.NAME).get())
     }
 
     @Test
