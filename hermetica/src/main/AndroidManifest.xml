@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application>
+        <!-- Only receives broadcasts once the app calls Hermetica.startGeofencing(). -->
+        <receiver android:name="com.hermeticacomms.sdk.HermeticaGeofenceReceiver" android:exported="false" />
+    </application>
+</manifest>
