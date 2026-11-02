@@ -41,7 +41,7 @@ internal object InAppImages {
         conn.connectTimeout = 10_000
         conn.readTimeout = 15_000
         try {
-            if (conn.responseCode !in 200..299 || conn.contentLengthLong > MAX_BYTES) null
+            if (conn.responseCode !in 200..299 || conn.contentLength > MAX_BYTES) null
             else conn.inputStream.use { input ->
                 val out = ByteArrayOutputStream()
                 val buf = ByteArray(16 * 1024)
