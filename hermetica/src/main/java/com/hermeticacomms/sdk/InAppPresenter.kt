@@ -2,7 +2,6 @@ package com.hermeticacomms.sdk
 
 import android.app.Activity
 import android.app.Dialog
-import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
@@ -19,8 +18,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import java.io.IOException
-import java.net.URL
 
 /** The default renderer: plain Android views in a Dialog, so apps need neither Compose nor AppCompat. */
 internal class InAppPresenter(
@@ -110,9 +107,10 @@ internal class InAppPresenter(
             layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, dp(160)).apply { bottomMargin = dp(12) }
         }
         val url = b.url ?: return v
-        // shortcut: decodes the image at full size with no cache; add sampling or an image loader if messages use very large images.
+        InAppImages.cached(url)?.let { v.setImageBitmap(it); return v }
+        val width = activity.resources.displayMetrics.widthPixels
         Thread {
-            val bmp = try { URL(url).openStream().use { BitmapFactory.decodeStream(it) } } catch (_: IOException) { null }
+            val bmp = InAppImages.load(url, width, dp(160))
             if (bmp != null) v.post { v.setImageBitmap(bmp) }
         }.start()
         return v

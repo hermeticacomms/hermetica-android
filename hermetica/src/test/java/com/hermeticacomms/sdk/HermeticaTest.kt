@@ -286,4 +286,13 @@ class HermeticaTest {
         assertEquals("g1", events.getJSONObject(0).getJSONObject("properties").getString("geofence_id"))
         assertEquals("\$geofence_exit", events.getJSONObject(1).getString("name"))
     }
+
+    @Test
+    fun inAppImagesDecodeAtAboutTheShownSize() {
+        assertEquals(1, InAppImages.sampleSize(1080, 480, 1080, 480))
+        assertEquals(2, InAppImages.sampleSize(2160, 960, 1080, 480))
+        assertEquals(4, InAppImages.sampleSize(4400, 2000, 1080, 480))
+        assertEquals(1, InAppImages.sampleSize(500, 300, 1080, 480)) // never upscaled
+        assertEquals(1, InAppImages.sampleSize(4000, 3000, 0, 0))
+    }
 }
