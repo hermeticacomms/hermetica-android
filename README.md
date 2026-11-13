@@ -8,7 +8,7 @@ dependencies: Firebase Messaging and Play Services Location are used only when y
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.hermeticacomms:hermetica:0.1.0")
+    implementation("com.hermeticacomms:hermetica:0.4.0")
 }
 ```
 
